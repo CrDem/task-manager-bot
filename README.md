@@ -64,11 +64,3 @@ After installing all the necessary dependencies and setting up the `.env` file, 
 ```bash
 python bot.py
 ```
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-Теперь, следуя этим шагам, ты сможешь установить и запустить бота на Windows.
