@@ -128,6 +128,29 @@ async def process_message(message: Message):
         await message.answer("✅ Задача добавлена!")
         user_states_collection.delete_one({"user_id": user_id})
 
+    elif state == "waiting_for_new_text":
+        task_id = user_state.get("task_changing_id")
+        tasks_collection.update_one({"_id": ObjectId(task_id)}, {"$set": {"text": message.text}})
+        await message.answer("✅ Текст задачи был успешно изменен!")
+        user_states_collection.delete_one({"user_id": user_id})
+        await clear_chat(message, 0)
+        await main_menu(message.chat.id)
+
+    elif state == "waiting_for_new_deadline":
+        task_id = user_state.get("task_changing_id")
+        try:
+            new_deadline = datetime.strptime(message.text, "%Y-%m-%d %H:%M")
+            if new_deadline < datetime.now():
+                await message.answer("⚠ Новый дедлайн не может быть в прошлом. Попробуйте снова.")
+                return
+            tasks_collection.update_one({"_id": ObjectId(task_id)}, {"$set": {"deadline": new_deadline}})
+            await message.answer("✅ Дедлайн задачи был успешно изменен!")
+            user_states_collection.delete_one({"user_id": user_id})
+            await clear_chat(message, 0)
+            await main_menu(message.chat.id)
+        except ValueError:
+            await message.answer("⚠ Неверный формат даты. Используйте ГГГГ-ММ-ДД ЧЧ:ММ.")
+
 # Управление конкретной задачей
 @dp.callback_query(F.data.startswith("edit_"))
 async def edit_task(callback: CallbackQuery):
@@ -142,6 +165,8 @@ async def edit_task(callback: CallbackQuery):
 
     markup = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✅ Отметить выполненной", callback_data=f"complete_{task_id}")],
+        [InlineKeyboardButton(text="✏ Изменить текст", callback_data=f"change_text_{task_id}")],
+        [InlineKeyboardButton(text="⏳ Изменить время", callback_data=f"change_time_{task_id}")],
         [InlineKeyboardButton(text="🗑 Удалить задачу", callback_data=f"remove_task_{task_id}")],
         [InlineKeyboardButton(text="🔙 Назад", callback_data="manage_tasks")]
     ])
@@ -163,6 +188,30 @@ async def remove_task(callback: CallbackQuery):
     tasks_collection.delete_one({"_id": ObjectId(task_id)})
     await callback.answer("🗑 Задача удалена.", show_alert=True)
     await manage_tasks(callback)
+
+# Изменение текста задачи
+@dp.callback_query(F.data.startswith("change_text_"))
+async def change_text(callback: CallbackQuery):
+    task_id = callback.data.split("_")[2]  # Извлекаем task_id
+    task = tasks_collection.find_one({"_id": ObjectId(task_id)})
+    if not task:
+        await callback.answer("⚠ Задача не найдена.", show_alert=True)
+        return
+
+    user_states_collection.update_one({"user_id": callback.from_user.id}, {"$set": {"state": "waiting_for_new_text", "task_changing_id": task_id}}, upsert=True)
+    await callback.message.edit_text(f"Вы хотите изменить текст задачи: {task['text']}. Пожалуйста, введите новый текст задачи:")
+
+# Изменение дедлайна задачи
+@dp.callback_query(F.data.startswith("change_time_"))
+async def change_time(callback: CallbackQuery):
+    task_id = callback.data.split("_")[2]  # Извлекаем task_id
+    task = tasks_collection.find_one({"_id": ObjectId(task_id)})
+    if not task:
+        await callback.answer("⚠ Задача не найдена.", show_alert=True)
+        return
+
+    user_states_collection.update_one({"user_id": callback.from_user.id}, {"$set": {"state": "waiting_for_new_deadline", "task_changing_id": task_id}}, upsert=True)
+    await callback.message.edit_text(f"Вы хотите изменить время задачи с {task['deadline']}. Пожалуйста, введите новый дедлайн в формате ГГГГ-ММ-ДД ЧЧ:ММ:")
 
 # Запуск бота
 async def main():
