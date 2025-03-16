@@ -12,23 +12,21 @@ This is a Telegram bot that helps you manage tasks and deadlines. It uses MongoD
 
 ### 2. Install Erlang
 RabbitMQ requires Erlang to run. Download and install Erlang:
-1. Go to the official Erlang website:
-   - [https://www.erlang.org/downloads](https://www.erlang.org/downloads)
-2. Download the installer for Windows.
-3. Run the installer and follow the instructions.
+- Go to the official Erlang website: [https://www.erlang.org/downloads](https://www.erlang.org/downloads)
+- Download the installer for Windows.
+- Run the installer and follow the instructions.
 
 ### 3. Install RabbitMQ
-1. Download the RabbitMQ installer from the official website:
-   - [https://www.rabbitmq.com/install-windows.html](https://www.rabbitmq.com/install-windows.html)
-2. Run the installer and follow the instructions.
+- Download the RabbitMQ installer from the official website: [https://www.rabbitmq.com/install-windows.html](https://www.rabbitmq.com/install-windows.html)
+- Run the installer and follow the instructions.
 
 ### 4. Start RabbitMQ
-1. Open **Command Prompt (cmd)** as Administrator.
-2. Navigate to the `sbin` folder:
+- Open **Command Prompt (cmd)** as Administrator.
+- Navigate to the `sbin` folder:
    ```sh
    cd "C:\Program Files\RabbitMQ Server\rabbitmq_server-<version>\sbin"
    ```
-3. Start the server manually:
+- Start the server manually:
    ```sh
    rabbitmq-server.bat
    ```
