@@ -12,17 +12,15 @@ from datetime import datetime, timedelta
 import asyncio
 import nest_asyncio
 from celery.result import AsyncResult
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 celery_app =Celery('bot', broker='amqp://guest:guest@localhost:5672//')
 
-
-# Загрузка переменных окружения
+# settings
 load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
 MONGO_URI = "mongodb://localhost:27017"
-
-# Настройки бота и базы данных
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 client = MongoClient(MONGO_URI)
@@ -31,7 +29,7 @@ tasks_collection = db["tasks"]
 user_states_collection = db["user_states"]
 nest_asyncio.apply()
 
-
+# notification functions
 async def send_async_notification(user_id, text):
     """Асинхронная функция для отправки уведомлений"""
     try:
@@ -49,9 +47,6 @@ def send_notification(user_id, text):
     except Exception as e:
         logger.error(f"Ошибка в send_notification: {e}")
 
-
-
-
 def schedule_notification(user_id, text, deadline):
     """Запланировать уведомление за час до дедлайна"""
     notify_time = deadline - timedelta(hours=1)
@@ -59,7 +54,7 @@ def schedule_notification(user_id, text, deadline):
 
     if delay > 0:
         task = send_notification.apply_async((user_id, text), countdown=delay)
-        return task.id  # Сохраняем ID задачи в БД
+        return task.id
     return None
 
 def revoke_notification(task_id):
@@ -73,7 +68,7 @@ from bson import ObjectId
 
 
 
-# Главное меню
+# help functions
 async def main_menu(chat_id):
     markup = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📋 Показать задачи", callback_data="show_tasks")],
@@ -81,7 +76,6 @@ async def main_menu(chat_id):
     ])
     await bot.send_message(chat_id, "Выберите действие:", reply_markup=markup)
 
-# Очистка чата
 async def clear_chat(message: Message, skipThisMessage: 1):
     chat_id = message.chat.id
     try:
@@ -93,19 +87,17 @@ async def clear_chat(message: Message, skipThisMessage: 1):
     except Exception as e:
         logging.warning(f"Ошибка при очистке чата: {e}")
 
-# Очистка состояния пользователя
 async def clear_state(user_id: id):
     if user_states_collection.find_one({"user_id": user_id}):
         user_states_collection.delete_one({"user_id": user_id})
 
-# Обработчик команды /start
+# command functions
 @dp.message(F.text == "/start")
 async def start_command(message: Message):
     await clear_state(message.from_user.id)
     await clear_chat(message, 0)
     await main_menu(message.chat.id)
 
-# Показ задач
 @dp.callback_query(F.data == "show_tasks")
 async def show_tasks(callback: CallbackQuery):
     await clear_state(callback.from_user.id)
@@ -125,7 +117,6 @@ async def show_tasks(callback: CallbackQuery):
         await bot.send_message(callback.message.chat.id, response)
     await main_menu(callback.message.chat.id)
 
-# Управление задачами
 @dp.callback_query(F.data == "manage_tasks")
 async def manage_tasks(callback: CallbackQuery):
     await clear_chat(callback.message, 0)
@@ -140,13 +131,12 @@ async def manage_tasks(callback: CallbackQuery):
     
     await bot.send_message(callback.message.chat.id, "Выберите действие:", reply_markup=markup)
 
-# Добавление задачи - Шаг 1: Ввод дедлайна
+# manage functions
 @dp.callback_query(F.data == "add_task")
 async def add_task(callback: CallbackQuery):
     user_states_collection.update_one({"user_id": callback.from_user.id}, {"$set": {"state": "waiting_for_deadline"}}, upsert=True)
     await bot.send_message(callback.message.chat.id, "Введите дедлайн задачи в формате ГГГГ-ММ-ДД ЧЧ:ММ:")
 
-# Ввод текста от пользователя
 @dp.message()
 async def process_message(message: Message):
     user_id = message.from_user.id
@@ -180,11 +170,8 @@ async def process_message(message: Message):
         }
         tasks_collection.insert_one(task)
         task_id = task["_id"]
-
-        # Запланировать уведомление за час до дедлайна
         celery_task_id = schedule_notification(user_id, message.text, user_state["deadline"])
 
-        # Обновляем запись в базе данных, добавляя celery_task_id
         tasks_collection.update_one(
             {"_id": task_id},
             {"$set": {"celery_task_id": celery_task_id}}
@@ -209,16 +196,12 @@ async def process_message(message: Message):
                 await message.answer("⚠ Новый дедлайн не может быть в прошлом. Попробуйте снова.")
                 return
             tasks_collection.update_one({"_id": ObjectId(task_id)}, {"$set": {"deadline": new_deadline}})
-            # Находим текущую задачу в базе данных
             task_record = tasks_collection.find_one({"_id": ObjectId(task_id)})
-            # Отменяем старую задачу Celery
+
             old_celery_task_id = task_record.get("celery_task_id")
             revoke_notification(old_celery_task_id)
-
-            # Перезапланировать уведомление для новой даты
             new_celery_task_id = schedule_notification(user_id, task_record["text"], new_deadline)
 
-            # Обновляем запись в базе данных
             tasks_collection.update_one(
                 {"_id": ObjectId(task_id)},
                 {
@@ -235,9 +218,6 @@ async def process_message(message: Message):
         except ValueError:
             await message.answer("⚠ Неверный формат даты. Используйте ГГГГ-ММ-ДД ЧЧ:ММ.")
 
-
-
-# Управление конкретной задачей
 @dp.callback_query(F.data.startswith("edit_"))
 async def edit_task(callback: CallbackQuery):
     task_id = callback.data.split("_")[1]
@@ -259,7 +239,6 @@ async def edit_task(callback: CallbackQuery):
     
     await bot.send_message(callback.message.chat.id, f"📌 {task['text']}\n🕒 Дедлайн: {task['deadline']}", reply_markup=markup)
 
-# Отметка задачи выполненной
 @dp.callback_query(F.data.startswith("complete_"))
 async def complete_task(callback: CallbackQuery):
     task_id = callback.data.split("_")[1]
@@ -267,7 +246,6 @@ async def complete_task(callback: CallbackQuery):
     await callback.answer("✅ Задача отмечена как выполненная.", show_alert=True)
     await manage_tasks(callback)
 
-# Удаление задачи
 @dp.callback_query(F.data.startswith("remove_task_"))
 async def remove_task(callback: CallbackQuery):
     task_id = callback.data.split("_")[2]
@@ -278,7 +256,6 @@ async def remove_task(callback: CallbackQuery):
     await callback.answer("🗑 Задача удалена.", show_alert=True)
     await manage_tasks(callback)
 
-# Изменение текста задачи
 @dp.callback_query(F.data.startswith("change_text_"))
 async def change_text(callback: CallbackQuery):
     task_id = callback.data.split("_")[2]  # Извлекаем task_id
@@ -290,7 +267,6 @@ async def change_text(callback: CallbackQuery):
     user_states_collection.update_one({"user_id": callback.from_user.id}, {"$set": {"state": "waiting_for_new_text", "task_changing_id": task_id}}, upsert=True)
     await callback.message.edit_text(f"Вы хотите изменить текст задачи: {task['text']}. Пожалуйста, введите новый текст задачи:")
 
-# Изменение дедлайна задачи
 @dp.callback_query(F.data.startswith("change_time_"))
 async def change_time(callback: CallbackQuery):
     task_id = callback.data.split("_")[2]  # Извлекаем task_id
@@ -302,7 +278,7 @@ async def change_time(callback: CallbackQuery):
     user_states_collection.update_one({"user_id": callback.from_user.id}, {"$set": {"state": "waiting_for_new_deadline", "task_changing_id": task_id}}, upsert=True)
     await callback.message.edit_text(f"Вы хотите изменить время задачи с {task['deadline']}. Пожалуйста, введите новый дедлайн в формате ГГГГ-ММ-ДД ЧЧ:ММ:")
 
-# Запуск бота
+# postavte >= 9 plz
 async def main():
     logging.basicConfig(level=logging.INFO)
     await dp.start_polling(bot)
