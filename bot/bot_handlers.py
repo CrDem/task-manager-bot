@@ -7,7 +7,6 @@ from notification import schedule_notification,revoke_notification
 from datetime import datetime
 from database_utils import tasks_collection, user_states_collection
 
-
 # command functions
 @dp.message(F.text == "/start")
 async def start_command(message: Message):
@@ -83,17 +82,17 @@ async def process_message(message: Message):
             "user_id": user_id,
             "text": message.text,
             "deadline": user_state["deadline"],
-            "completed": False
+            "completed": False,
+            "extended": False
+
         }
         tasks_collection.insert_one(task)
         task_id = task["_id"]
         celery_task_id = schedule_notification(user_id, message.text, user_state["deadline"])
-
         tasks_collection.update_one(
             {"_id": task_id},
             {"$set": {"celery_task_id": celery_task_id}}
         )
-
         await message.answer("✅ Задача добавлена и уведомление установлено!")
         user_states_collection.delete_one({"user_id": user_id})
 

@@ -1,12 +1,14 @@
 import asyncio
 import logging
+import time
 from datetime import datetime, timedelta
 from celery import Celery
 from config import bot
-# from celery.schedules import crontab
-# from bot.database_utils import tasks_collection
+from celery.schedules import crontab
+from bot.database_utils import tasks_collection
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+from bson import ObjectId
 
 celery_app = Celery('notification', broker='amqp://guest:guest@localhost:5672//')
 
@@ -28,7 +30,6 @@ def send_notification(user_id, text):
     except Exception as e:
         logger.error(f"Ошибка в send_notification: {e}")
 
-
 def schedule_notification(user_id, text, deadline):
     """Запланировать уведомление за час до дедлайна"""
     notify_time = deadline - timedelta(hours=1)
@@ -45,59 +46,55 @@ def revoke_notification(task_id):
     celery_app.control.revoke(task_id, terminate=True)
     logger.info(f"Задача {task_id} удалена")
 
-# celery_app.conf.beat_schedule = {
-#     'check-deadlines-every-5-minutes': {  # Имя расписания
-#         'task': 'bot.check_deadlines',  # Имя Celery задачи
-#         'schedule': timedelta(seconds=10)
-#   # Каждые 5 минут
-#     }
-# }
-# celery_app.conf.timezone = 'UTC'
-#
-# @celery_app.task(name='bot.check_deadlines')
-# def check_deadlines():
-#     """
-#     Проверяет истёкшие задачи и продлевает дедлайн.
-#     """
-#     try:
-#         now = datetime.now()
-#
-#         # Ищем задачи с истёкшим дедлайном
-#         tasks = tasks_collection.find({
-#             "deadline": {"$lt": now},  # Дедлайн истёк
-#             "completed": False,  # Задача не выполнена
-#             "extended": False  # Ещё не была продлена
-#         })
-#
-#         for task in tasks:
-#             task_id = task["_id"]
-#             user_id = task["user_id"]
-#             try:
-#                 # Проверяем, не была ли задача удалена (или снова что-то изменилось)
-#                 task = tasks_collection.find_one({"_id": task_id})
-#                 if not task:
-#                     logger.info(f"Задача {task_id} была удалена. Пропускаем.")
-#                     continue
-#
-#                 # Продлеваем дедлайн на сутки
-#                 new_deadline = task["deadline"] + timedelta(days=1)
-#                 tasks_collection.update_one(
-#                     {"_id": task_id},
-#                     {"$set": {
-#                         "deadline": new_deadline,
-#                         "extended": True
-#                     }}
-#                 )
-#
-#                 # Уведомляем пользователя о продлении
-#                 text = (
-#                     f"Срок вашей задачи '{task['title']}' истёк. Мы продлили её на 1 день.\n"
-#                     f"Новый дедлайн: {new_deadline.strftime('%Y-%m-%d %H:%M')}"
-#                 )
-#                 asyncio.run(send_async_notification(user_id, text))
-#                 logger.info(f"Продлили задачу {task_id} до {new_deadline} для пользователя {user_id}.")
-#             except Exception as e:
-#                 logger.error(f"Ошибка обработки задачи {task_id}: {e}")
-#     except Exception as e:
-#         logger.error(f"Ошибка проверки дедлайнов: {e}")
+@celery_app.task(name="check_expired_tasks_and_prolong")
+def check_expired_tasks_and_prolong():
+    """
+    Проходит по БД, находит задачи с истекшим дедлайном, продлевает на 1 день,
+    если еще не были продлены ранее (extended=False). Если задача была удалена, уведомление не отправляется.
+    """
+    now = datetime.now()
+
+    expired_tasks = tasks_collection.find({"deadline": {"$lt": now}, "extended": False})
+
+    for task in expired_tasks:
+        task_id = task["_id"]
+        user_id = task["user_id"]
+        task_text = task["text"]
+        old_deadline = task["deadline"]
+
+        new_deadline = old_deadline + timedelta(days=1)
+        result = tasks_collection.update_one(
+            {"_id": task_id, "extended": False},
+            {"$set": {"deadline": new_deadline, "extended": True}}
+        )
+
+        if result.modified_count > 0:
+            notification_text = (
+                f"⏳ Ваша задача '{task_text}' имела истекший срок выполнения. "
+                f"Срок продлен на 1 день. Новый дедлайн: {new_deadline.strftime('%Y-%m-%d %H:%M:%S')}."
+            )
+
+            try:
+                asyncio.run(send_async_notification(user_id, notification_text))
+                logger.info(f"Уведомление отправлено пользователю {user_id} о продлении задачи {task_id}.")
+            except Exception as e:
+                logger.error(f"Ошибка при отправке уведомления для задачи {task_id}: {e}")
+        else:
+            logger.info(f"Задача {task_id} не найдена или уже была продлена.")
+
+
+celery_app.conf.beat_schedule = {
+    "check-expired-tasks-every-5-minutes": {
+        "task": "check_expired_tasks_and_prolong",
+        "schedule": 120,
+    },
+}
+
+
+
+
+
+
+
+
 
