@@ -2,6 +2,27 @@
 
 This is a Telegram bot that helps you manage tasks and deadlines. It uses MongoDB as a database to store tasks and related information.
 
+## 🚀 Launch with Docker
+
+### 1. Clone the repository
+```bash
+git clone https://github.com/CrDem/task-manager-bot.git
+cd task-manager-bot
+```
+
+### 2. Create a .env file
+In the root directory, create a .env file and add your bot token:
+```bash
+TOKEN=your_telegram_bot_token
+```
+
+### 3. Launch the containers
+Run the following command to build and start the Docker containers:
+```bash
+docker-compose up --build -d
+```
+**To stop the containers, run:** docker-compose down
+
 ## Launch for Windows
 
 ### 1. Install MongoDB

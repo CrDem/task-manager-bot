@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  bot:
+    build: .
+    container_name: task_manager_bot
+    depends_on:
+      - mongodb
+      - rabbitmq
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    command: python main.py
+    restart: always
+
+  mongodb:
+    image: mongo:6
+    container_name: mongo_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: always
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    restart: always
+
+  celery_worker:
+    build: .
+    container_name: celery_worker
+    depends_on:
+      - rabbitmq
+      - mongodb
+    env_file:
+      - .env
+    command: celery -A bot.notification worker --loglevel=info --pool=solo
+    restart: always
+
+  celery_beat:
+    build: .
+    container_name: celery_beat
+    depends_on:
+      - rabbitmq
+      - mongodb
+    env_file:
+      - .env
+    command: celery -A bot.notification beat --loglevel=info
+    restart: always
+
+volumes:
+  mongo_data:
