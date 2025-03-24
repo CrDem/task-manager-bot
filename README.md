@@ -6,14 +6,13 @@ This is a Telegram bot that helps you manage tasks and deadlines. It uses MongoD
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/CrDem/task-manager-bot.git
-cd task-manager-bot
+git clone https://github.com/CrDem/task-manager-bot
 ```
 
 ### 2. Create a .env file
 In the root directory, create a .env file and add your bot token:
 ```bash
-TOKEN=your_telegram_bot_token
+BOT_TOKEN=your_telegram_bot_token
 ```
 
 ### 3. Launch the containers
@@ -21,7 +20,7 @@ Run the following command to build and start the Docker containers:
 ```bash
 docker-compose up --build -d
 ```
-**To stop the containers, run:** docker-compose down
+> **To stop the containers, run:** docker-compose down
 
 ## 💻 Launch for Windows
 
@@ -64,7 +63,7 @@ git clone https://github.com/CrDem/task-manager-bot.git
 - In the root directory of the cloned project, create a file named `.env`.
 - Inside the `.env` file, add your Telegram bot token in the following format:
 ```env
-TOKEN=your_telegram_bot_token
+BOT_TOKEN=your_telegram_bot_token
 ```
 Replace `your_telegram_bot_token` with the actual token from [BotFather](https://core.telegram.org/bots#botfather).
 
