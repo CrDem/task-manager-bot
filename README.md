@@ -70,6 +70,10 @@ venv\Scripts\activate
 ### 9. Install dependencies
 Install the dependencies:
 ```bash
+pip install -r requirements.txt
+```
+or manually:
+```bash
 pip install aiogram pymongo python-dotenv celery nest_asyncio
 ```
 
