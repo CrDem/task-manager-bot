@@ -1,7 +1,7 @@
 from aiogram import F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from bot_utils import main_menu, clear_state,clear_chat
-from bot.config import bot, dp
+from config import bot, dp
 from bson import ObjectId
 from notification import schedule_notification,revoke_notification
 from datetime import datetime
@@ -195,5 +195,3 @@ async def change_time(callback: CallbackQuery):
     await callback.message.edit_text(f"Вы хотите изменить время задачи с {task['deadline']}. Пожалуйста, введите новый дедлайн в формате ГГГГ-ММ-ДД ЧЧ:ММ:")
 
 # postavte >= 9 plz
-
-

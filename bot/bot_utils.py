@@ -1,6 +1,6 @@
 import logging
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
-from bot.config import bot
+from config import bot
 from database_utils import user_states_collection
 
 logging.basicConfig(level=logging.INFO)
@@ -19,7 +19,7 @@ async def clear_chat(message: Message, skipThisMessage: int = 1):
     chat_id = message.chat.id
     try:
         for i in range(message.message_id - skipThisMessage, message.message_id - 100,
-                       -1):  # Удаляем последние 100 сообщений
+                       -1): 
             try:
                 await bot.delete_message(chat_id, i)
             except Exception:

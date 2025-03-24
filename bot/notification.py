@@ -2,8 +2,8 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 from celery import Celery
-from bot.config import bot
-from bot.database_utils import tasks_collection
+from config import bot
+from database_utils import tasks_collection
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -81,17 +81,8 @@ def check_expired_tasks_and_prolong():
 
 
 celery_app.conf.beat_schedule = {
-    "check-expired-tasks-every-5-minutes": {
+    "check-expired-tasks-every-2-minutes": {
         "task": "check_expired_tasks_and_prolong",
         "schedule": 120,
     },
 }
-
-
-
-
-
-
-
-
-

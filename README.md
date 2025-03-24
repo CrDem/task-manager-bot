@@ -74,14 +74,19 @@ pip install aiogram pymongo python-dotenv celery nest_asyncio
 ```
 
 ### 10. Run Celery with RabbitMQ
+In terminal 1:
 ```bash
 celery -A bot.notification beat --loglevel=info 
+```
+In terminal 2:
+```bash
 celery -A bot.notification worker --loglevel=info --pool=solo
 ```
 
 > **Important:** The `--pool=solo` flag is required on Windows.
 
 ### 11. Run the bot
+In terminal 3:
 ```bash
 python main.py
 ```
