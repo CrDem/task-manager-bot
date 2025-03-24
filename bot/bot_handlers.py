@@ -1,7 +1,7 @@
 from aiogram import F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from bot_utils import main_menu, clear_state,clear_chat
-from config import bot, dp
+from bot.config import bot, dp
 from bson import ObjectId
 from notification import schedule_notification,revoke_notification
 from datetime import datetime

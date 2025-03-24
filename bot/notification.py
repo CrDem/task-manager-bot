@@ -1,14 +1,11 @@
 import asyncio
 import logging
-import time
 from datetime import datetime, timedelta
 from celery import Celery
-from config import bot
-from celery.schedules import crontab
+from bot.config import bot
 from bot.database_utils import tasks_collection
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-from bson import ObjectId
 
 celery_app = Celery('notification', broker='amqp://guest:guest@localhost:5672//')
 

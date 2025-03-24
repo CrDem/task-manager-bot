@@ -1,6 +1,6 @@
 import logging
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
-from config import bot
+from bot.config import bot
 from database_utils import user_states_collection
 
 logging.basicConfig(level=logging.INFO)
