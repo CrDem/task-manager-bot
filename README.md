@@ -23,7 +23,7 @@ docker-compose up --build -d
 ```
 **To stop the containers, run:** docker-compose down
 
-## Launch for Windows
+## 💻 Launch for Windows
 
 ### 1. Install MongoDB
 
