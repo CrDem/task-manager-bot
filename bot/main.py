@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from config import bot, dp
+from bot.config import bot, dp
 from aiogram.filters import Command
 from bot_handlers import start_command, show_tasks, add_task, process_message, edit_task, complete_task, \
     remove_task
