@@ -43,7 +43,7 @@ git clone https://github.com/CrDem/task-manager-bot.git
 - In the root directory of the cloned project, create a file named `.env`.
 - Inside the `.env` file, add your Telegram bot token in the following format:
 ```env
-TOKEN=your_telegram_bot_token
+BOT_TOKEN=your_telegram_bot_token
 ```
 Replace `your_telegram_bot_token` with the actual token from [BotFather](https://core.telegram.org/bots#botfather).
 
