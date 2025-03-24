@@ -4,7 +4,7 @@ This is a Telegram bot that helps you manage tasks and deadlines. It uses MongoD
 
 ## Launch for Windows
 
-### 1. Download MongoDB
+### 1. Install MongoDB
 
 - Go to [MongoDB Community Downloads](https://www.mongodb.com/try/download/community) and download the latest version of MongoDB for Windows.
 - Install MongoDB by following the instructions on the website.
